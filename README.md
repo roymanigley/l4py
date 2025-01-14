@@ -23,6 +23,14 @@
     - `@l4py_test` from `l4py.test` is a decorator to streamline testing and validation of logging behavior, ensuring precise control over loggers and outputs.
     - `l4py_entries_from_stream` from `l4py.test` is a helper function to extract and process log entries from streams for easy verification during tests.
 
+### Example Code
+![log code](docs/img/l4py-poc.png)
+### Default console output
+![log output - console](docs/img/l4py-output-console.png)
+### Default file output
+![log output - file](docs/img/l4py-output-file.png)
+
+
 ## Installation
 ```
 pip install l4py
