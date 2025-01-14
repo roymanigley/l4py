@@ -2,6 +2,15 @@
 ![Unit-Tests](https://github.com/roymanigley/l4py/actions/workflows/test.yml/badge.svg)  
 ![Published Python Package](https://github.com/roymanigley/l4py/actions/workflows/publish.yml/badge.svg)
 
+```
+██╗██╗  ██╗██████╗ ██╗   ██╗
+██║██║  ██║██╔══██╗╚██╗ ██╔╝
+██║███████║██████╔╝ ╚████╔╝ 
+██║╚════██║██╔═══╝   ╚██╔╝  
+███████╗██║██║        ██║   
+╚══════╝╚═╝╚═╝        ╚═╝
+```
+
 > **`l4py`** is a Python library that simplifies logging configuration and enhances logging output with flexible formatting and output options. It offers an easy-to-use interface to configure both console and file logging with various customization features like JSON formatting, file rotation, and automatic log level handling. The library leverages the Python standard logging module and integrates seamlessly with Django's logging configuration.
 
 ## Key Features:
