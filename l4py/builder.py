@@ -1,3 +1,4 @@
+import abc
 import inspect
 import logging
 import logging.config
@@ -7,7 +8,7 @@ from l4py import utils
 from l4py.formatters import TextFormatter, JsonFormatter
 
 
-def __get_caller_info():
+def _get_caller_info():
     frame = inspect.currentframe().f_back.f_back
     module_name = frame.f_globals.get('__name__', '<unknown>')
     class_name = None
@@ -18,103 +19,190 @@ def __get_caller_info():
 
 def get_logger(logger_name: str = None) -> logging.Logger:
     if logger_name is None:
-        module_name, class_name = __get_caller_info()
-        logger_name = ''.join([s for s in [module_name, class_name] if s is not None])
+        module_name, class_name = _get_caller_info()
+        logger_name = '.'.join([s for s in [module_name, class_name] if s is not None])
     return logging.getLogger(logger_name)
 
 
-class LogConfigBuilder:
-    __text_formatter = TextFormatter()
-    __json_formatter = JsonFormatter()
+class AbstractLoggingBuilder:
+    _text_formatter: type[logging.Formatter] = TextFormatter
+    _json_formatter: type[logging.Formatter] = JsonFormatter
 
-    __console_json = False
+    _filters: dict[str, type[logging.Filter]] = {}
+    _console_enabled: bool = True
+    _console_format: str = None
+    _console_formatter: type[logging.Formatter] = _text_formatter
 
-    __file = f'{utils.get_app_name()}-{platform.uname().node}.log'
-    __file_json = True
-    __file_max_size = 10 * 1024 * 1024  # 10 MB (default)
-    __file_max_count = 5  # Default 5 backup files
+    _file_enabled: bool = True
+    _file: str = f'{utils.get_app_name()}-{platform.uname().node}.log'
+    _file_max_size: int = 10 * 1024 * 1024  # 10 MB (default)
+    _file_max_count: int = 5  # Default 5 backup files
+    _file_format: str = None
+    _file_formatter: type[logging.Formatter] = _json_formatter
 
-    def console_json(self, value: bool) -> 'LogConfigBuilder':
-        self.__console_json = value
+    def console_json(self, value: bool) -> 'AbstractLoggingBuilder':
+        self._console_formatter = JsonFormatter if value else TextFormatter
         return self
 
-    def file(self, file_name: str) -> 'LogConfigBuilder':
-        self.__file = file_name
+    def file(self, file_name: str) -> 'AbstractLoggingBuilder':
+        self._file = file_name
         return self
 
-    def file_json(self, value: bool) -> 'LogConfigBuilder':
-        self.__file_json = value
+    def file_json(self, value: bool) -> 'AbstractLoggingBuilder':
+        self._file_formatter = JsonFormatter if value else TextFormatter
         return self
 
-    def file_max_size_mb(self, size_in_mb: int) -> 'LogConfigBuilder':
-        self.__file_max_size = size_in_mb * 1024 * 1024
+    def file_max_size_mb(self, size_in_mb: int) -> 'AbstractLoggingBuilder':
+        self._file_max_size = size_in_mb * 1024 * 1024
         return self
 
-    def file_max_count(self, count: int) -> 'LogConfigBuilder':
-        self.__file_max_count = count
+    def file_max_count(self, count: int) -> 'AbstractLoggingBuilder':
+        self._file_max_count = count
         return self
 
-    def build_config_dict(self) -> dict:
+    def console_enabled(self, enabled: bool) -> 'AbstractLoggingBuilder':
+        self._console_enabled = enabled
+        return self
+
+    def file_enabled(self, enabled: bool) -> 'AbstractLoggingBuilder':
+        self._file_enabled = enabled
+        return self
+
+    def console_formatter(self, formatter: type[logging.Formatter]) -> 'AbstractLoggingBuilder':
+        self._console_formatter = formatter
+        return self
+
+    def console_format(self, format: str) -> 'AbstractLoggingBuilder':
+        self._console_format = format
+        return self
+
+    def file_formatter(self, formatter: type[logging.Formatter]) -> 'AbstractLoggingBuilder':
+        self._file_formatter = formatter
+        return self
+
+    def file_format(self, format: str) -> 'AbstractLoggingBuilder':
+        self._file_format = format
+        return self
+
+    def add_filter(self, name: str, filter: type[logging.Filter]) -> 'AbstractLoggingBuilder':
+        self._filters[name] = {'()', filter}
+
+    @abc.abstractmethod
+    def build_config(self) -> dict:
+        pass
+
+    def init(self) -> None:
+        config_dict = self.build_config()
+        logging.config.dictConfig(config_dict)
+
+    def build_default_config(self) -> dict:
+
+        handlers_names = []
+        formatters = {}
+        handlers = {}
+
+        if self._console_enabled:
+            if self._console_format:
+                formatters['console'] = {
+                    'format': self._console_format,
+                }
+            else:
+                formatters['console'] = {
+                    '()': f'{self._console_formatter.__module__}.{self._console_formatter.__name__}',
+                }
+            handlers_names.append('console')
+            handlers['console'] = {
+                'class': 'logging.StreamHandler',
+                'formatter': 'console',
+                'filters': self._filters.keys()
+            }
+
+        if self._file_enabled:
+            if self._console_format:
+                formatters['file'] = {
+                    'format': self._file_format,
+                }
+            else:
+                formatters['file'] = {
+                    '()': f'{self._file_formatter.__module__}.{self._file_formatter.__name__}',
+                }
+            handlers_names.append('file')
+            handlers['file'] = {
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': self._file,
+                'maxBytes': self._file_max_size,
+                'backupCount': self._file_max_count,
+                'formatter': 'file',
+                'filters': self._filters.keys()
+            }
+
         config_dict = {
             'version': 1,
             'disable_existing_loggers': False,
-            'handlers': {
-                'console': {
-                    'class': 'logging.StreamHandler',
-                    'formatter': 'console',
-                },
-                'file': {
-                    'class': 'logging.handlers.RotatingFileHandler',
-                    'filename': self.__file,
-                    'maxBytes': self.__file_max_size,
-                    'backupCount': self.__file_max_count,
-                    'formatter': 'file',
-                },
-            },
+            'filters': self._filters,
+            'handlers': handlers,
             'root': {
                 'level': utils.get_log_level_root(),
-                "handlers": [
-                    "console",
-                    "file"
-                ]
+                "handlers": handlers_names,
+                "filters": self._filters.keys(),
+                'propagate': True,
             },
             'loggers': {
             },
-            'formatters': {
-                'file': {
-                    '()': f'{JsonFormatter.__module__}.{JsonFormatter.__name__}' if self.__file_json else f'{TextFormatter.__module__}.{TextFormatter.__name__}',
-                },
-                'console': {
-                    '()': f'{JsonFormatter.__module__}.{JsonFormatter.__name__}' if self.__console_json else f'{TextFormatter.__module__}.{TextFormatter.__name__}',
-                },
-            },
+            'formatters': formatters
         }
+
+        # TODO: allow to add filters
 
         for logger_level_dict in utils.get_log_levels_env():
             config_dict['loggers'][logger_level_dict['logger']] = {
-                'handlers': ['console', 'file'],
+                'handlers': handlers_names,
                 'level': logger_level_dict['level'],
                 'propagate': True,
             }
 
         return config_dict
 
-    def init(self) -> None:
-        config_dict = self.build_config_dict()
-        logging.config.dictConfig(config_dict)
 
-    def build_config_dict_for_django(self, django_log_level=logging.INFO, show_sql=False) -> dict:
-        config_dict = self.build_config_dict()
+class LogConfigBuilder(AbstractLoggingBuilder):
+
+    def build_config(self) -> dict:
+        config_dict = self.build_default_config()
+        return config_dict
+
+
+class LogConfigBuilderDjango(AbstractLoggingBuilder):
+    _django_log_level = logging.INFO
+    _show_sql = False
+
+    def django_log_level(self, log_level: int) -> 'LogConfigBuilderDjango':
+        self._django_log_level = log_level
+        return self
+
+    def show_sql(self, show_sql: bool) -> 'LogConfigBuilderDjango':
+        self._show_sql = show_sql
+        return self
+
+    def build_config(self) -> dict:
+        config_dict = self.build_default_config()
+
+        handlers_names = []
+
+        if self._console_enabled:
+            handlers_names.append('console')
+
+        if self._file_enabled:
+            handlers_names.append('file')
 
         config_dict['loggers']['django'] = {
-            'handlers': ['console', 'file'],
-            'level': django_log_level,
+            'handlers': config_dict['root']['handlers'],
+            'level': self._django_log_level,
             'propagate': False,
         }
 
         config_dict['loggers']['django.db.backends'] = {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG' if show_sql else django_log_level,
+            'handlers': config_dict['root']['handlers'],
+            'level': 'DEBUG' if self.show_sql else self._django_log_level,
             'propagate': False,
         }
 

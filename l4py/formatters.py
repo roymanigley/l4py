@@ -5,8 +5,9 @@ from datetime import datetime
 from l4py import utils
 
 
-class FormatTimeMixin():
-    def formatTime(self, record, datefmt=None):
+class FormatTimeMixin:
+
+    def format_time(self, record, datefmt=None):
         ct = datetime.fromtimestamp(record.created)
         if datefmt:
             return ct.strftime(datefmt)
@@ -14,15 +15,17 @@ class FormatTimeMixin():
             return ct.strftime("%Y-%m-%dT%H:%M:%S.") + f"{int(record.msecs):03d}"
 
 
-class JsonFormatter(FormatTimeMixin, logging.Formatter):
-
+class AbstractFormatter(FormatTimeMixin, logging.Formatter):
     def __init__(self, app_name=utils.get_app_name()):
         super().__init__()
         self.app_name = app_name
 
-    def format(self, record):
+
+class JsonFormatter(AbstractFormatter):
+
+    def format(self, record) -> str:
         log_record = {
-            "timestamp": self.formatTime(record),
+            "timestamp": self.format_time(record),
             "app_name": self.app_name,
             "logger_name": record.name,
             "level": record.levelname,
@@ -34,15 +37,19 @@ class JsonFormatter(FormatTimeMixin, logging.Formatter):
         return json.dumps(log_record)
 
 
-class TextFormatter(FormatTimeMixin, logging.Formatter):
+class TextFormatter(AbstractFormatter):
 
-    def __init__(self, app_name=utils.get_app_name()):
-        super().__init__()
-        self.app_name = app_name
+    color_mapping = {
+        'DEBUG': '32',
+        'INFO': '34',
+        'WARNING': '33',
+        'FATAL': '31',
+        'CRITICAL': '31',
+    }
 
-    def format(self, record):
+    def format(self, record) -> str:
         log_record = {
-            "timestamp": self.formatTime(record),
+            "timestamp": self.format_time(record),
             "app_name": self.app_name,
             "logger_name": record.name,
             "level": record.levelname,
@@ -51,5 +58,6 @@ class TextFormatter(FormatTimeMixin, logging.Formatter):
             "function_name": record.funcName,
             "message": record.msg,
         }
-        return '{timestamp} [{level:<8}] {app_name} {file_name}:{line_number} {function_name}: {message}'.format(
+        
+        return '\033[' + self.color_mapping[record.levelname] + 'm{timestamp} [{level:<8}] {app_name} {file_name}:{line_number} {function_name}: {message}\033[0m'.format(
             **log_record)
