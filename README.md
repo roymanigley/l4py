@@ -45,6 +45,10 @@ python setup.py install
 ## Usage
 > All th values set in the builder and the environment variables are the default values, and they don't have to be set explicit
 
+**Environment Variables:**
+- `L4PY_APP_NAME` default = 'python-app'
+- `L4PY_LOG_LEVEL_{logger_name}` and `L4PY_LOG_LEVEL_ROOT`
+
 ```python
 from l4py import LogConfigBuilder, LogConfigBuilderDjango, get_logger, utils
 import platform
@@ -62,6 +66,7 @@ LogConfigBuilder()\
     .file_max_count(5)\
     .file_max_size_mb(5)\
     .console_json(False)\
+    .add_logger('my.logger', logging.DEBUG)\
     .init()
 
 # returns a logger config dict
@@ -71,12 +76,14 @@ config_dict = LogConfigBuilder()\
     .file_max_count(5)\
     .file_max_size_mb(5)\
     .console_json(False)\
+    .add_logger('my.logger', logging.DEBUG)\
     .build_config()
 
 # Add this to you django `settings.py`
 LOGGING = LogConfigBuilderDjango()\
     .django_log_level(logging.INFO)\
     .show_sql(False)\
+    .add_logger('my.logger', logging.DEBUG)\
     .build_config()
 
 logger = get_logger()

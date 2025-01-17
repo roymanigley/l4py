@@ -28,6 +28,8 @@ class AbstractLoggingBuilder:
     _text_formatter: type[logging.Formatter] = TextFormatter
     _json_formatter: type[logging.Formatter] = JsonFormatter
 
+    _loggers: dict[str, int] = {}
+
     _filters: dict[str, type[logging.Filter]] = {}
     _console_enabled: bool = True
     _console_format: str = None
@@ -86,6 +88,9 @@ class AbstractLoggingBuilder:
 
     def add_filter(self, name: str, filter: type[logging.Filter]) -> 'AbstractLoggingBuilder':
         self._filters[name] = {'()', filter}
+
+    def add_logger(self, name: str, log_level: int) -> 'AbstractLoggingBuilder':
+        self._loggers[name] = log_level
 
     @abc.abstractmethod
     def build_config(self) -> dict:
@@ -152,7 +157,12 @@ class AbstractLoggingBuilder:
             'formatters': formatters
         }
 
-        # TODO: allow to add filters
+        for name, level in self._loggers.items():
+            config_dict['loggers'][name] = {
+                'handlers': handlers_names,
+                'level': level,
+                'propagate': True,
+            }
 
         for logger_level_dict in utils.get_log_levels_env():
             config_dict['loggers'][logger_level_dict['logger']] = {
