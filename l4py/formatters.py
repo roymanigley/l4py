@@ -32,7 +32,7 @@ class JsonFormatter(AbstractFormatter):
             "file_name": record.filename,
             "line_number": record.lineno,
             "function_name": record.funcName,
-            "message": record.msg,
+            "message": record.msg % record.args,
         }
         return json.dumps(log_record)
 
@@ -56,8 +56,8 @@ class TextFormatter(AbstractFormatter):
             "file_name": record.filename,
             "line_number": record.lineno,
             "function_name": record.funcName,
-            "message": record.msg,
+            "message": record.msg % record.args,
         }
         
-        return '\033[' + self.color_mapping[record.levelname] + 'm{timestamp} [{level:<8}] {app_name} {file_name}:{line_number} {function_name}: {message}\033[0m'.format(
+        return '\033[' + self.color_mapping[record.levelname] + 'm{timestamp} [{level:<8}] {app_name} {logger_name} {file_name}:{line_number} {function_name}: {message}\033[0m'.format(
             **log_record)
