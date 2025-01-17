@@ -10,7 +10,7 @@ def get_app_name() -> str:
     return os.environ.get('L4PY_APP_NAME', 'python-app')
 
 
-def get_log_level_root() -> str or int:
+def get_log_level_root_from_env() -> str or int:
     level = os.environ.get(_LOG_LEVEL_ROOT_KEY, f'{logging.INFO}')
     return int(level) if level.isdigit() else level
 

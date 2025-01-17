@@ -29,6 +29,7 @@ class AbstractLoggingBuilder:
     _json_formatter: type[logging.Formatter] = JsonFormatter
 
     _loggers: dict[str, int] = {}
+    _root_level: int = utils.get_log_level_root_from_env()
 
     _filters: dict[str, type[logging.Filter]] = {}
     _console_enabled: bool = True
@@ -88,9 +89,15 @@ class AbstractLoggingBuilder:
 
     def add_filter(self, name: str, filter: type[logging.Filter]) -> 'AbstractLoggingBuilder':
         self._filters[name] = {'()', filter}
+        return self
 
     def add_logger(self, name: str, log_level: int) -> 'AbstractLoggingBuilder':
         self._loggers[name] = log_level
+        return self
+
+    def add_logger(self, log_level: int) -> 'AbstractLoggingBuilder':
+        self._root_level = log_level
+        return self
 
     @abc.abstractmethod
     def build_config(self) -> dict:
@@ -147,7 +154,7 @@ class AbstractLoggingBuilder:
             'filters': self._filters,
             'handlers': handlers,
             'root': {
-                'level': utils.get_log_level_root(),
+                'level': self._root_level,
                 "handlers": handlers_names,
                 "filters": self._filters.keys(),
                 'propagate': True,
@@ -182,7 +189,7 @@ class LogConfigBuilder(AbstractLoggingBuilder):
 
 
 class LogConfigBuilderDjango(AbstractLoggingBuilder):
-    _django_log_level = logging.INFO
+    _django_log_level = utils.get_log_level_root_from_env()
     _show_sql = False
 
     def django_log_level(self, log_level: int) -> 'LogConfigBuilderDjango':
@@ -210,10 +217,11 @@ class LogConfigBuilderDjango(AbstractLoggingBuilder):
             'propagate': False,
         }
 
-        config_dict['loggers']['django.db.backends'] = {
-            'handlers': config_dict['root']['handlers'],
-            'level': 'DEBUG' if self.show_sql else self._django_log_level,
-            'propagate': False,
-        }
+        if self.show_sql:
+            config_dict['loggers']['django.db.backends'] = {
+                'handlers': config_dict['root']['handlers'],
+                'level': 'DEBUG',
+                'propagate': False,
+            }
 
         return config_dict
