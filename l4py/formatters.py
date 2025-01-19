@@ -23,7 +23,7 @@ class AbstractFormatter(FormatTimeMixin, logging.Formatter):
 
 class JsonFormatter(AbstractFormatter):
 
-    def format(self, record) -> str:
+    def format(self, record: logging.LogRecord) -> str:
         log_record = {
             "timestamp": self.format_time(record),
             "app_name": self.app_name,
@@ -33,6 +33,7 @@ class JsonFormatter(AbstractFormatter):
             "line_number": record.lineno,
             "function_name": record.funcName,
             "message": record.msg % record.args,
+            "exception": self.formatException(record.exc_info) if record.exc_info else None
         }
         return json.dumps(log_record)
 
@@ -43,11 +44,12 @@ class TextFormatter(AbstractFormatter):
         'DEBUG': '32',
         'INFO': '34',
         'WARNING': '33',
+        'ERROR': '31',
         'FATAL': '31',
         'CRITICAL': '31',
     }
 
-    def format(self, record) -> str:
+    def format(self, record: logging.LogRecord) -> str:
         log_record = {
             "timestamp": self.format_time(record),
             "app_name": self.app_name,
@@ -58,6 +60,9 @@ class TextFormatter(AbstractFormatter):
             "function_name": record.funcName,
             "message": record.msg % record.args,
         }
-        
-        return '\033[' + self.color_mapping[record.levelname] + 'm{timestamp} [{level:<8}] {app_name} {logger_name} {file_name}:{line_number} {function_name}: {message}\033[0m'.format(
+
+        formatted_log = '\033[' + self.color_mapping[record.levelname] + 'm{timestamp} [{level:<8}] {app_name} {logger_name} {file_name}:{line_number} {function_name}: {message}'.format(
             **log_record)
+        if exec_info := record.exc_info:
+            formatted_log += f'\n{self.formatException(exec_info)}'
+        return formatted_log + '\033[0m'

@@ -29,7 +29,7 @@ class AbstractLoggingBuilder:
     _json_formatter: type[logging.Formatter] = JsonFormatter
 
     _loggers: dict[str, int] = {}
-    _root_level: int = utils.get_log_level_root_from_env()
+    _root_level: int = None
 
     _filters: dict[str, type[logging.Filter]] = {}
     _console_enabled: bool = True
@@ -95,7 +95,7 @@ class AbstractLoggingBuilder:
         self._loggers[name] = log_level
         return self
 
-    def add_logger(self, log_level: int) -> 'AbstractLoggingBuilder':
+    def add_root_logger(self, log_level: int) -> 'AbstractLoggingBuilder':
         self._root_level = log_level
         return self
 
@@ -154,7 +154,7 @@ class AbstractLoggingBuilder:
             'filters': self._filters,
             'handlers': handlers,
             'root': {
-                'level': self._root_level,
+                'level': self._root_level if self._root_level else utils.get_log_level_root_from_env(),
                 "handlers": handlers_names,
                 "filters": self._filters.keys(),
                 'propagate': True,

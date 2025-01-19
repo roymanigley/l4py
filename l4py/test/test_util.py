@@ -55,7 +55,7 @@ def l4py_test(
         *,
         builder: AbstractLoggingBuilder = LogConfigBuilder(),
         logger_name: str = 'l4py.test.logger',
-        env_vars: dict[str, int]
+        env_vars: dict[str, int] = None
 ):
 
     def decorator(function: callable):

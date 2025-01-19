@@ -1,6 +1,7 @@
 import json
 import logging
 import unittest
+from io import StringIO
 
 from l4py import LogConfigBuilder
 from l4py import utils
@@ -82,6 +83,20 @@ class LoggerTest(unittest.TestCase):
         self.assertEqual(json.loads(file_entries[4])['message'], 'This is a INFO Message from the parent Logger')
         self.assertEqual(json.loads(file_entries[5])['level'], 'DEBUG')
         self.assertEqual(json.loads(file_entries[5])['message'], 'This is a DEBUG Message from the parent Logger')
+
+
+    @l4py_test(
+        builder=LogConfigBuilder()
+    )
+    def test_exception_logging(self, logger: logging.Logger, streams: list[StringIO]):
+        try:
+            1/0
+        except ZeroDivisionError:
+            logger.exception('Hello')
+
+        exception_message = ' '.join(l4py_entries_from_stream(streams['console']))
+
+        self.assertRegex(exception_message, '^.+Traceback.+1/0.+ZeroDivisionError: division by zero.+')
 
 
 if __name__ == '__main__':
