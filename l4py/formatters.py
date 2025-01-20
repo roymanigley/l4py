@@ -16,8 +16,10 @@ class FormatTimeMixin:
 
 
 class AbstractFormatter(FormatTimeMixin, logging.Formatter):
-    def __init__(self, app_name=utils.get_app_name()):
+    def __init__(self, app_name=None):
         super().__init__()
+        if app_name is None:
+            app_name = utils.get_app_name()
         self.app_name = app_name
 
 

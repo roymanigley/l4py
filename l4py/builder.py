@@ -20,7 +20,9 @@ def _get_caller_info():
 def get_logger(logger_name: str = None) -> logging.Logger:
     if logger_name is None:
         module_name, class_name = _get_caller_info()
-        logger_name = '.'.join([s for s in [module_name, class_name] if s is not None])
+        logger_name = '.'.join(
+            [s for s in [module_name, class_name] if s is not None]
+        )
     return logging.getLogger(logger_name)
 
 
@@ -37,11 +39,15 @@ class AbstractLoggingBuilder:
     _console_formatter: type[logging.Formatter] = _text_formatter
 
     _file_enabled: bool = True
-    _file: str = f'{utils.get_app_name()}-{platform.uname().node}.log'
+    _file: str = None
     _file_max_size: int = 10 * 1024 * 1024  # 10 MB (default)
     _file_max_count: int = 5  # Default 5 backup files
     _file_format: str = None
     _file_formatter: type[logging.Formatter] = _json_formatter
+
+    def app_name(self, app_name: str) -> 'AbstractLoggingBuilder':
+        utils.set_app_name(app_name)
+        return self
 
     def console_json(self, value: bool) -> 'AbstractLoggingBuilder':
         self._console_formatter = JsonFormatter if value else TextFormatter
@@ -95,7 +101,7 @@ class AbstractLoggingBuilder:
         self._loggers[name] = log_level
         return self
 
-    def add_root_logger(self, log_level: int) -> 'AbstractLoggingBuilder':
+    def root_logger(self, log_level: int) -> 'AbstractLoggingBuilder':
         self._root_level = log_level
         return self
 
@@ -141,7 +147,7 @@ class AbstractLoggingBuilder:
             handlers_names.append('file')
             handlers['file'] = {
                 'class': 'logging.handlers.RotatingFileHandler',
-                'filename': self._file,
+                'filename': self._file if self._file else f'{utils.get_app_name()}-{platform.uname().node}.log',
                 'maxBytes': self._file_max_size,
                 'backupCount': self._file_max_count,
                 'formatter': 'file',
@@ -166,14 +172,12 @@ class AbstractLoggingBuilder:
 
         for name, level in self._loggers.items():
             config_dict['loggers'][name] = {
-                'handlers': handlers_names,
                 'level': level,
                 'propagate': True,
             }
 
         for logger_level_dict in utils.get_log_levels_env():
             config_dict['loggers'][logger_level_dict['logger']] = {
-                'handlers': handlers_names,
                 'level': logger_level_dict['level'],
                 'propagate': True,
             }
@@ -217,7 +221,7 @@ class LogConfigBuilderDjango(AbstractLoggingBuilder):
             'propagate': False,
         }
 
-        if self.show_sql:
+        if self._show_sql:
             config_dict['loggers']['django.db.backends'] = {
                 'handlers': config_dict['root']['handlers'],
                 'level': 'DEBUG',
