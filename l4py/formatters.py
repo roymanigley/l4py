@@ -34,7 +34,7 @@ class JsonFormatter(AbstractFormatter):
             "file_name": record.filename,
             "line_number": record.lineno,
             "function_name": record.funcName,
-            "message": record.msg % record.args,
+            "message": str(record.msg) % record.args,
             "exception": self.formatException(record.exc_info) if record.exc_info else None
         }
         return json.dumps(log_record)
@@ -60,7 +60,7 @@ class TextFormatter(AbstractFormatter):
             "file_name": record.filename,
             "line_number": record.lineno,
             "function_name": record.funcName,
-            "message": record.msg % record.args,
+            "message": str(record.msg) % record.args,
         }
 
         formatted_log = '\033[' + self.color_mapping[record.levelname] + 'm{timestamp} [{level:<8}] {app_name} {logger_name} {file_name}:{line_number} {function_name}: {message}'.format(

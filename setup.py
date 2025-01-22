@@ -4,7 +4,7 @@ long_description = open('README.md', "rt").read()
 
 setup(
     name='l4py',
-    version='0.1.8',
+    version='0.1.9',
     description='l4py is a Python library that simplifies logging configuration with features like JSON formatting, file rotation, and dynamic log levels via environment variables. It integrates seamlessly with Django and leverages the Python standard logging module for easy customization.',
     long_description=long_description,
     long_description_content_type='text/markdown',
