@@ -33,7 +33,11 @@ class AbstractLoggingBuilder:
     _loggers: dict[str, int] = {}
     _root_level: int = None
 
-    _filters: dict[str, type[logging.Filter]] = {}
+    _filters: dict[str, type[logging.Filter]] = {
+        'context': {
+            '()': 'l4py.context.ContextFilter',
+        }
+    }
     _console_enabled: bool = True
     _console_format: str = None
     _console_formatter: type[logging.Formatter] = _text_formatter
@@ -94,7 +98,7 @@ class AbstractLoggingBuilder:
         return self
 
     def add_filter(self, name: str, filter: type[logging.Filter]) -> 'AbstractLoggingBuilder':
-        self._filters[name] = {'()', filter}
+        self._filters[name] = {'()': filter}
         return self
 
     def add_logger(self, name: str, log_level: int) -> 'AbstractLoggingBuilder':
@@ -132,11 +136,11 @@ class AbstractLoggingBuilder:
             handlers['console'] = {
                 'class': 'logging.StreamHandler',
                 'formatter': 'console',
-                'filters': self._filters.keys()
+                'filters': list(self._filters.keys())
             }
 
         if self._file_enabled:
-            if self._console_format:
+            if self._file_format:
                 formatters['file'] = {
                     'format': self._file_format,
                 }
@@ -151,7 +155,7 @@ class AbstractLoggingBuilder:
                 'maxBytes': self._file_max_size,
                 'backupCount': self._file_max_count,
                 'formatter': 'file',
-                'filters': self._filters.keys()
+                'filters': list(self._filters.keys())
             }
 
         config_dict = {
@@ -162,7 +166,7 @@ class AbstractLoggingBuilder:
             'root': {
                 'level': self._root_level if self._root_level else utils.get_log_level_root_from_env(),
                 "handlers": handlers_names,
-                "filters": self._filters.keys(),
+                "filters": list(self._filters.keys()),
                 'propagate': True,
             },
             'loggers': {

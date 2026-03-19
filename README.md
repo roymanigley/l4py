@@ -14,6 +14,7 @@
 > **`l4py`** is a Python library that simplifies logging configuration and enhances logging output with flexible formatting and output options. It offers an easy-to-use interface to configure both console and file logging with various customization features like JSON formatting, file rotation, and automatic log level handling. The library leverages the Python standard logging module and integrates seamlessly with Django's logging configuration.
 
 ## Key Features:
+- **Context-aware Logging** (`trace_id` / `user_id`):** Automatically enriches all log records with `trace_id` and `user_id` when available in the active contextvars context.
 - **File Logging:** Automatically handles file logging with customizable file names, maximum size, and retention count.
 - **JSON Support:** Optionally format log messages in JSON for structured output, both in console and log files.
 - **Django Integration:** Simplifies Django logging configuration with a pre-built function to create a LOGGING dict compatible with Django's settings.

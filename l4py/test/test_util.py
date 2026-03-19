@@ -35,13 +35,16 @@ def init_test_logger(
     logger = get_logger(logger_name)
 
     streams: dict[str: StringIO] = {}
-    for handler_name in handler_names:
-        stream = StringIO()
-        streams[handler_name] = stream
-        handler = logging.StreamHandler(stream)
-        if formatter_instance := get_formatter_instance(config, handler_name):
-            handler.setFormatter(formatter_instance)
-            logger.addHandler(handler)
+    for handler in logging.getLogger().handlers:
+        print(handler.name, handler_names)
+        if handler.name in handler_names:
+            stream = StringIO()
+            streams[handler.name] = stream
+            new_handler = logging.StreamHandler(stream)
+            new_handler.setLevel(handler.level)
+            new_handler.setFormatter(handler.formatter)
+            new_handler.filters = handler.filters
+            logger.addHandler(new_handler)
 
     return logger, streams
 

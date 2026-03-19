@@ -1,10 +1,12 @@
 import json
 import logging
 import unittest
+import uuid
 from io import StringIO
 
 from l4py import LogConfigBuilder
 from l4py import utils
+from l4py.context import set_trace_id, set_user_id
 from l4py.test import l4py_test, l4py_entries_from_stream
 
 
@@ -97,6 +99,27 @@ class LoggerTest(unittest.TestCase):
         exception_message = ' '.join(l4py_entries_from_stream(streams['console']))
 
         self.assertRegex(exception_message, '^.+Traceback.+1/0.+ZeroDivisionError: division by zero.+')
+
+    @l4py_test(
+        builder=LogConfigBuilder()
+    )
+    def test_trace_id_and_user_id_logging(self, logger: logging.Logger, streams: list[StringIO]):
+        trace_id = uuid.uuid4().hex
+        user_id = 'royman'
+        set_trace_id(trace_id)
+        set_user_id(user_id)
+
+        logger.info('Hello')
+
+        console_message = ' '.join(l4py_entries_from_stream(streams['console']))
+        file_message = ' '.join(l4py_entries_from_stream(streams['file']))
+        file_message_dict = json.loads(file_message)
+
+        self.assertIn(f'user_id: {user_id}', console_message, f'user_id: {user_id} should be in the log console message')
+        self.assertIn(f'trace_id: {trace_id}', console_message, f'trace_id: {trace_id} should be in the log console message')
+
+        self.assertEqual(file_message_dict.get('user_id'), user_id, f'user_id: {user_id} should be in the log file message')
+        self.assertEqual(file_message_dict.get('trace_id'), trace_id, f'trace_id: {trace_id} should be in the log file message')
 
 
 if __name__ == '__main__':
