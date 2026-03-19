@@ -96,6 +96,77 @@ logger.critical('This is a CRITICAL Message')
 logger.fatal('This is a FATAL message')
 ```
 
+### Set `trace_id` and `user_id`
+
+#### Functions
+
+```python
+import uuid
+from l4py.context import set_user_id, set_trace_id
+
+set_trace_id(uuid.uuid4().hex)
+set_user_id('royman')
+```
+#### Django Middleware
+```python
+import uuid
+from django.utils.deprecation import MiddlewareMixin
+
+from l4py.context import set_trace_id, set_user_id
+
+
+class LoggingContextMiddleware(MiddlewareMixin):
+    """
+    Injects trace_id and user_id into contextvars for logging correlation.
+    """
+
+    def process_request(self, request):
+        trace_id = request.headers.get("X-Trace-Id") or uuid.uuid4().hex
+        set_trace_id(trace_id)
+
+        user_id = None
+        if hasattr(request, "user") and request.user.is_authenticated:
+            user_id = str(request.user.id)
+        set_user_id(user_id)
+
+        request.trace_id = trace_id
+        request.user_id = user_id
+
+    def process_response(self, request, response):
+        if hasattr(request, "trace_id"):
+            response["X-Trace-Id"] = request.trace_id
+        return response
+```
+#### Flask Request Hooks
+```python
+import uuid
+from flask import request, g
+
+from l4py.context import set_trace_id, set_user_id
+
+
+def init_logging_context(app):
+
+    @app.before_request
+    def set_logging_context():
+        trace_id = request.headers.get("X-Trace-Id") or uuid.uuid4().hex
+        set_trace_id(trace_id)
+
+        user_id = None
+        if hasattr(g, "user") and getattr(g.user, "is_authenticated", False):
+            user_id = str(g.user.id)
+        set_user_id(user_id)
+
+        g.trace_id = trace_id
+        g.user_id = user_id
+
+    @app.after_request
+    def attach_trace_id_to_response(response):
+        if hasattr(g, "trace_id"):
+            response.headers["X-Trace-Id"] = g.trace_id
+        return response
+```
+
 ## Testing
 
 ```python
