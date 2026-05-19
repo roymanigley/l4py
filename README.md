@@ -137,6 +137,12 @@ class LoggingContextMiddleware(MiddlewareMixin):
             response["X-Trace-Id"] = request.trace_id
         return response
 ```
+`settings.py`
+```
+CORS_EXPOSE_HEADERS = [
+    "X-Trace-Id",
+]
+```
 #### Flask Request Hooks
 ```python
 import uuid
